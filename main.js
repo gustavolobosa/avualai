@@ -1,10 +1,13 @@
 const { chromium } = require('playwright');  // También puedes usar firefox o webkit
 const readline = require('readline');
+const path = require('path');
+const fs = require('fs');
 
 const bot_TGR = require('./bot_TGR'); // Asegúrate de que la ruta sea correcta
 const mapping = require('./mapping');
 const bot_SII_maps = require('./maps');
 const bot_SII_rol = require('./bot_SII');
+const bot_AA = require('./bot_avaluo_anterior');
 
 (async () => {
 
@@ -62,6 +65,16 @@ const bot_SII_rol = require('./bot_SII');
     await bot_TGR(page_TGR, manzana, predio, mapping[variables.comuna], variables.region);
 
     await browser_TGR.close();
+
+    const browser_AA = await chromium.launch({ headless: false }); // headless: true para no mostrar el navegador
+    const page_AA = await browser_AA.newPage();
+
+    // Ir a una página objetivo
+    await page_AA.goto('https://www2.sii.cl/vicana/Menu/ConsultarAntecedentesSC');
+
+    await bot_AA(page_AA, variables, manzana, predio);
+
+    await browser_AA.close();
 
 })().catch(error => {
     console.error('Error en la ejecución del bot:', error);

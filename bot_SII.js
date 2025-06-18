@@ -7,34 +7,43 @@ module.exports = async function bot_SII_rol(page, variables) {
     // llenar campo //*[@id="addresssearch"]/div[2]/div[1]/input con variables predefinidas
     await page.click('xpath=//*[@id="addresssearch"]/div[2]/div[1]/input');
     await page.fill('xpath=//*[@id="addresssearch"]/div[2]/div[1]/input', '');
-    await page.type('xpath=//*[@id="addresssearch"]/div[2]/div[1]/input', variables.comuna, { delay: 5 });
+    await page.type('xpath=//*[@id="addresssearch"]/div[2]/div[1]/input', variables.comuna, { delay: 100 });
 
     await page.waitForFunction(() => {
-    const items = document.querySelectorAll('ul[role="listbox"] li');
-    return items.length > 0;
+        const items = document.querySelectorAll('ul[role="listbox"] li');
+        return items.length > 0;
     }, { timeout: 7000 });
 
-    await page.evaluate((comunaObjetivo) => {
-    const normalizar = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-    const opciones = document.querySelectorAll('ul[role="listbox"] li');
-    const objetivo = normalizar(comunaObjetivo);
+    const seleccionoComuna = await page.evaluate((comunaObjetivo) => {
+        const normalizar = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        const opciones = document.querySelectorAll('ul[role="listbox"] li');
+        const objetivo = normalizar(comunaObjetivo);
 
-    for (const opcion of opciones) {
-        const texto = normalizar(opcion.innerText);
-        if (texto.includes(objetivo)) {
-        opcion.click();
-        return;
+        for (const opcion of opciones) {
+            const texto = normalizar(opcion.innerText);
+            if (texto.includes(objetivo)) {
+                opcion.click();
+                return true;
+            }
         }
-    }
+        return false;
     }, variables.comuna);
 
 
-    await page.fill('//*[@id="addresssearch"]/div[2]/div[2]/input', variables.direccion);
-    await page.fill('//*[@id="addresssearch"]/div[2]/div[3]/input', variables.numero);
+    await page.fill('//*[@id="addresssearch"]/div[2]/div[2]/input', variables.direccion, { delay: 500 });
+    await page.fill('//*[@id="addresssearch"]/div[2]/div[3]/input', variables.numero, { delay: 500 });
+
+    console.log('OKK')
+    await page.waitForTimeout(1000); 
 
     // seleccionar el boton buscar
-    await page.waitForSelector('//*[@id="addresssearch"]/div[2]/div[9]/div/button[1]');
+    await page.waitForFunction(() => {
+    const boton = document.querySelector('#addresssearch div:nth-child(2) div:nth-child(9) div button');
+        return boton && !boton.disabled;
+    }, { timeout: 15000 });
     await page.click('//*[@id="addresssearch"]/div[2]/div[9]/div/button[1]');
+
+    console.log('OKK2')
 
     // esperar a que aparezca el boton de ver detalles
     await page.waitForSelector('//*[@id="ng-app"]/body/div[5]/div/div/div/div[2]/table/tbody/tr/td[4]/button', { timeout: 10000 });

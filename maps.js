@@ -4,13 +4,19 @@ module.exports = async function bot_SII_maps(page, variables) {
     await page.waitForSelector('//*[@id="ng-app"]/body/div[5]/div/div/div[3]/div/button');
     await page.click('//*[@id="ng-app"]/body/div[5]/div/div/div[3]/div/button');
 
+    await page.waitForTimeout(500); 
+
     //*[@id="titulo"]/div[7]/i
     await page.waitForSelector('//*[@id="titulo"]/div[7]/i');
     await page.click('//*[@id="titulo"]/div[7]/i');
 
+    await page.waitForTimeout(500); 
+
     // presionar buscar comunas
     await page.waitForSelector('//*[@id="titulo"]/div[5]/i');
     await page.click('//*[@id="titulo"]/div[5]/i');
+
+    await page.waitForTimeout(500); 
 
     // 👉 Función para normalizar texto (quitar tildes y poner mayúsculas)
     const normalizar = str =>
@@ -19,7 +25,11 @@ module.exports = async function bot_SII_maps(page, variables) {
     // ✅ Seleccionar región
     const regionNormalizada = normalizar(variables.region);
 
-    await page.waitForSelector('#regionSeleccionada');
+    // Esperar a que se cargue la lista de regiones
+    await page.waitForFunction(() => {
+        const select = document.querySelector('#regionSeleccionada');
+        return select && select.options.length > 1;
+    }, { timeout: 10000 });
 
     const regiones = await page.$$eval('#regionSeleccionada option', opts =>
         opts.map(o => ({ value: o.value, label: o.label }))
@@ -62,6 +72,7 @@ module.exports = async function bot_SII_maps(page, variables) {
     }
 
     // presionar el boton buscar //*[@id="layersearch"]/div[2]/div[2]/div/button[1]
+    await page.waitForTimeout(1000); 
     await page.waitForSelector('//*[@id="layersearch"]/div[2]/div[2]/div/button[1]');
     await page.click('//*[@id="layersearch"]/div[2]/div[2]/div/button[1]');
 

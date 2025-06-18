@@ -1,0 +1,68 @@
+const { chromium } = require('playwright');  // También puedes usar firefox o webkit
+const readline = require('readline');
+
+const bot_TGR = require('./bot_TGR'); // Asegúrate de que la ruta sea correcta
+const mapping = require('./mapping');
+const bot_SII_maps = require('./maps');
+const bot_SII_rol = require('./bot_SII');
+
+(async () => {
+
+    // Helper para hacer preguntas de forma asincrónica
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+
+    const askQuestion = (question) => {
+        return new Promise((resolve) => {
+        rl.question(question, (answer) => resolve(answer));
+        });
+    };
+
+    // Pedir los inputs al usuario
+    // const variables = {
+    //     region: (await askQuestion('Ingrese la región: ')).toUpperCase(),
+    //     comuna: (await askQuestion('Ingrese la comuna: ')).toUpperCase(),
+    //     direccion: await askQuestion('Ingrese la dirección: '),
+    //     numero: await askQuestion('Ingrese el número: '),
+    // };
+
+    const variables = {
+        region: 'REGION METROPOLITANA DE SANTIAGO',
+        comuna: 'LAS CONDES',
+        direccion: 'la rabida',
+        numero: '5575',
+    };
+
+
+    rl.close(); // cerrar readline cuando ya no se usa
+    // Lanzar el navegador
+    const browser_SII = await chromium.launch({ headless: false }); // headless: true para no mostrar el navegador
+    const page_SII = await browser_SII.newPage();
+
+    // Ir a una página objetivo
+    await page_SII.goto('https://www4.sii.cl/mapasui/internet/#/contenido/index.html');
+
+    // Ejecutar el bot SII Maps
+    await bot_SII_maps(page_SII, variables);
+
+    // Ejecutar el bot SII Rol y obtener la manzana y predio
+    const { manzana, predio } = await bot_SII_rol(page_SII, variables);
+
+    await browser_SII.close();
+
+    const browser_TGR = await chromium.launch({ headless: false }); // headless: true para no mostrar el navegador
+    const page_TGR = await browser_TGR.newPage();
+
+    // Ir a una página objetivo
+    await page_TGR.goto('https://www.tgr.cl/tramites-tgr/certificado-de-movimientos-de-contribuciones/');
+    
+    // Ejecutar el bot TGR
+    await bot_TGR(page_TGR, manzana, predio, mapping[variables.comuna], variables.region);
+
+    await browser_TGR.close();
+
+})().catch(error => {
+    console.error('Error en la ejecución del bot:', error);
+});

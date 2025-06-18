@@ -1,33 +1,4 @@
-const { chromium } = require('playwright');  // También puedes usar firefox o webkit
-const readline = require('readline');
-
-(async () => {
-
-    // Helper para hacer preguntas de forma asincrónica
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-
-    const askQuestion = (question) => {
-        return new Promise((resolve) => {
-        rl.question(question, (answer) => resolve(answer));
-        });
-    };
-
-    // Pedir los inputs al usuario
-    const variables = {
-        region: 'REGIÓN METROPOLITANA DE SANTIAGO',//(await askQuestion('Ingrese la región: ')).toUpperCase(),
-        comuna: 'LAS CONDES', //(await askQuestion('Ingrese la comuna: ')).toUpperCase(),
-    };
-
-    rl.close(); // cerrar readline cuando ya no se usa
-    // Lanzar el navegador
-    const browser = await chromium.launch({ headless: false }); // headless: true para no mostrar el navegador
-    const page = await browser.newPage();
-
-    // Ir a una página objetivo
-    await page.goto('https://www4.sii.cl/mapasui/internet/#/contenido/index.html');
+module.exports = async function bot_SII_maps(page, variables) {
 
     // presionar un boton con xpath
     await page.waitForSelector('//*[@id="ng-app"]/body/div[5]/div/div/div[3]/div/button');
@@ -60,18 +31,17 @@ const readline = require('readline');
 
     if (opcionRegion) {
         await page.selectOption('#regionSeleccionada', opcionRegion.value);
-        console.log(`✅ Región seleccionada: ${opcionRegion.label}`);
+        console.log(`Región seleccionada: ${opcionRegion.label}`);
     } else {
-        console.log(`❌ Región "${variables.region}" no encontrada.`);
-        await browser.close();
+        console.log(`Región "${variables.region}" no encontrada.`);
         return;
     }
 
     // 🕒 Esperar a que se cargue la lista de comunas (depende del sistema, puede necesitar más tiempo)
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
     await page.waitForSelector('#comunaSeleccionada');
 
-    // ✅ Seleccionar comuna
+    // Seleccionar comuna
     const comunaNormalizada = normalizar(variables.comuna);
 
     const comunas = await page.$$eval('#comunaSeleccionada option', opts =>
@@ -84,9 +54,9 @@ const readline = require('readline');
 
     if (opcionComuna) {
         await page.selectOption('#comunaSeleccionada', opcionComuna.value);
-        console.log(`✅ Comuna seleccionada: ${opcionComuna.label}`);
+        console.log(`Comuna seleccionada: ${opcionComuna.label}`);
     } else {
-        console.log(`❌ Comuna "${variables.comuna}" no encontrada.`);
+        console.log(`Comuna "${variables.comuna}" no encontrada.`);
         await browser.close();
         return;
     }
@@ -99,18 +69,22 @@ const readline = require('readline');
     await page.waitForSelector('//*[@id="layersearch"]/div[2]/div[3]/table/tbody/tr[16]/td[2]/button');
     await page.click('//*[@id="layersearch"]/div[2]/div[3]/table/tbody/tr[16]/td[2]/button');
 
-    await page.waitForTimeout(1000); // deja que se cargue
-        await page.waitForFunction(() => {
-        return document.querySelectorAll('path.leaflet-interactive').length > 0;
-    }, { timeout: 60000 });
+    //clikear el centro del mapa
+    await page.waitForSelector('#mapaid', {state: 'visible', timeout: 10000 });
 
-    // Ahora extraer todas las zonas
-    const zonas = await page.$$('path.leaflet-interactive');
-    console.log(`Zonas encontradas: ${zonas.length}`);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(1000); 
 
-    // esperar 40 segundos
-    await page.waitForTimeout(40000);
+    const mapElement = await page.$('#mapaid');
 
-    // Cerrar el navegador
-    await browser.close();
-})();
+    const boundingBox = await mapElement.boundingBox();
+
+    const centerX = boundingBox.x + boundingBox.width / 2;
+    const centerY = boundingBox.y + boundingBox.height / 2;
+
+    console.log(`Centro del mapa: (${centerX}, ${centerY})`);
+
+    await page.mouse.click(centerX, centerY);
+
+    await page.waitForTimeout(2000); 
+}
